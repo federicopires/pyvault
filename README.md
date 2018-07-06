@@ -44,7 +44,7 @@ Now, let's write that into vault:
 
 ```
 export VAULT_ADDR='http://127.0.0.1:8200'
-export VAILT_TOKEN=some-token
+export VAULT_TOKEN=some-token
 
 pyvault write vault.yaml
 ```
