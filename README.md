@@ -1,6 +1,6 @@
 # Pyvault
 
-This is a tool to interact with Hashicorp's Vault KV secret engine (v1).
+This is a tool to interact with [Hashicorp's Vault](https://www.vaultproject.io/) KV secret engine (v1).
 
 It supports importing a YAML file into vault, and also dumping Vault's keys with YAML formatting.
 
