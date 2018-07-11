@@ -24,6 +24,8 @@ def write(filename):
 
     for path, kv in data.items():
 
+        kv = _sanitize_dict(kv)
+
         try:
             client.write(path, **kv)
         except Exception as e:
@@ -87,6 +89,20 @@ def _load_yaml(filename):
             sys.exit(1)
 
     return data
+
+
+def _sanitize_dict(data):
+    """
+    Make sure dict's keys are strings (vault requirement)
+    :param data: dictionary
+    :return: sanitized dictionary
+    """
+    for k, v in data.items():
+        if not isinstance(k, str):
+            data[str(k)] = data.pop(k)
+
+    return data
+
 
 if __name__ == '__main__':
     cli()
