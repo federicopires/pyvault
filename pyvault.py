@@ -85,7 +85,11 @@ def _load_yaml(filename):
             data = yaml.safe_load(stream)
 
         except yaml.YAMLError as e:
-            print('Error while loading YAML file: %s' % e)
+            if hasattr(e, 'problem_mark'):
+                mark = e.problem_mark
+                print("YAML error at position: (%s:%s) in %s: %s" % (mark.line + 1, mark.column + 1, filename, e))
+            else:
+                print('Error while loading YAML file: %s' % e)
             sys.exit(1)
 
     return data
