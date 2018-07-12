@@ -87,7 +87,8 @@ def _load_yaml(filename):
         except yaml.YAMLError as e:
             if hasattr(e, 'problem_mark'):
                 mark = e.problem_mark
-                print("YAML error at position: (%s:%s) in %s: %s" % (mark.line + 1, mark.column + 1, filename, e))
+                print("YAML error at position: (%s:%s) in %s: %s" %
+                      (mark.line + 1, mark.column + 1, filename, e))
             else:
                 print('Error while loading YAML file: %s' % e)
             sys.exit(1)
