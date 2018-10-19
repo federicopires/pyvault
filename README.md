@@ -66,3 +66,5 @@ Key    Value
 ---    -----
 key    map[subkey:password subkey2:password2]
 ```
+
+You can also use the ```--userpass``` flag to authenticate using a username / password combination.
