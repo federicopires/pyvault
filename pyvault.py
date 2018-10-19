@@ -4,6 +4,8 @@ import hvac
 import yaml
 import click
 
+from getpass import getpass
+
 
 @click.group()
 def cli():
@@ -12,14 +14,20 @@ def cli():
 
 @cli.command(help='Writes contents of a YAML file to vault.')
 @click.argument('filename', type=click.Path(exists=True))
-def write(filename):
+@click.option('--userpass', is_flag=True, default=False,
+              help='Use userpass auth backend instead of token.')
+@click.option('--tls_skip_verify', is_flag=True, default=True,
+              help='Skip ssl certificate verification')
+def write(filename, tls_skip_verify, userpass):
     """
     Writes dict built from YAML file to vault.
     :param filename: path to YAML file
+    :param tls_skip_verify: true/false to enable/disable ssl cert verification
+    :param userpass: true/false to enable/disable userpass auth backend
     :return:
     """
 
-    client = _vault_connect()
+    client = _vault_connect(tls_skip_verify, userpass)
     data = _load_yaml(filename)
 
     for path, kv in data.items():
@@ -35,14 +43,20 @@ def write(filename):
 
 @cli.command(help='Dumps key values from vault in YAML format.')
 @click.argument('path')
-def read(path):
+@click.option('--userpass', is_flag=True, default=False,
+              help='Use userpass auth backend instead of token.')
+@click.option('--tls_skip_verify', is_flag=True, default=True,
+              help='Skip ssl certificate verification')
+def read(path, tls_skip_verify, userpass):
     """
     Reads from vault key at the given path and dumps values.
     :param path: path to the key in vault
+    :param tls_skip_verify: true/false to enable/disable ssl cert verification
+    :param userpass: true/false to enable/disable userpass auth backend
     :return:
     """
 
-    client = _vault_connect()
+    client = _vault_connect(tls_skip_verify, userpass)
     d = {path: {}}
 
     try:
@@ -54,21 +68,50 @@ def read(path):
     for key, value in data.items():
         d[path][key] = value
 
+    # Adapt the Representer to output all strings with embedded newlines
+    # using the literal scalar block style
+    # (assuming they don't need \ escaping of special characters,
+    # which will force double quotes).
+    # This fixes extra newlines in yaml scalars.
+    yaml.SafeDumper.org_represent_str = yaml.SafeDumper.represent_str
+    yaml.add_representer(str, _repr_str, Dumper=yaml.SafeDumper)
+
     print(yaml.dump(d, default_flow_style=False))
 
 
-def _vault_connect():
+def _repr_str(dumper, data):
+    if '\n' in data:
+        return dumper.represent_scalar(u'tag:yaml.org,2002:str',
+                                       data, style='|')
+    return dumper.org_represent_str(data)
+
+
+def _vault_connect(tls_skip_verify=True, userpass=False):
     """
-    Connects to vault using env vars for address and token.
+    Connects to vault using env vars for address and token, or userpass auth.
     :return: vault client object
+    :param tls_skip_verify: true/false to enable/disable ssl cert verification
+    :param userpass: true/false to enable/disable userpass auth backend
     """
 
-    try:
-        client = hvac.Client(url=os.environ['VAULT_ADDR'],
-                             token=os.environ['VAULT_TOKEN'])
-    except Exception as e:
-        print('Error connecting to vault: %s' % e)
-        sys.exit(1)
+    if userpass:
+        try:
+            username = input('Vault username: ')
+            password = getpass(prompt='Vault password: ')
+            client = hvac.Client(url=os.environ['VAULT_ADDR'],
+                                 verify=tls_skip_verify)
+            client.auth_userpass(username, password)
+        except Exception as e:
+            print('Error connecting to vault: %s' % e)
+            sys.exit(1)
+    else:
+        try:
+            client = hvac.Client(url=os.environ['VAULT_ADDR'],
+                                 token=os.environ['VAULT_TOKEN'],
+                                 verify=tls_skip_verify)
+        except Exception as e:
+            print('Error connecting to vault: %s' % e)
+            sys.exit(1)
 
     return client
 
